@@ -8,12 +8,13 @@ import {
   Sparkles, 
   ShieldCheck, 
   ArrowRight, 
-  Info,
-  Layers,
-  XCircle,
-  HelpCircle,
-  TrendingUp,
-  Award
+  Info, 
+  Layers, 
+  XCircle, 
+  TrendingUp, 
+  Award,
+  ChevronRight,
+  BookOpen
 } from 'lucide-react';
 
 const SkillGapPage = () => {
@@ -59,61 +60,62 @@ const SkillGapPage = () => {
         setAnalysisResult(res.data);
       }
     } catch (err) {
-      showNotification("Failed to compute skill gap analysis.", "danger");
+      // Fallback local analytical calculation if network or auth error
+      if (selectedTargetRole) {
+        const reqSkills = selectedTargetRole.required_skills || [];
+        const matched = reqSkills.filter(s => 
+          studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim())
+        );
+        const missing = reqSkills.filter(s => 
+          !studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim())
+        );
+        const matchPct = reqSkills.length > 0 ? Math.round((matched.length / reqSkills.length) * 100) : 0;
+        setAnalysisResult({
+          skill_match_percentage: matchPct,
+          skill_gap_percentage: 100 - matchPct,
+          matching_skills: matched,
+          missing_skills: missing
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const matchPct = analysisResult?.skill_match_percentage || 0;
-  const gapPct = analysisResult?.skill_gap_percentage || 100;
+  const matchPct = Math.round(analysisResult?.skill_match_percentage || 0);
+  const gapPct = Math.round(analysisResult?.skill_gap_percentage || (100 - matchPct));
+  const matchedSkills = analysisResult?.matching_skills || [];
+  const missingSkills = analysisResult?.missing_skills || [];
+
+  const circumference = 2 * Math.PI * 42;
+  const matchOffset = circumference - (circumference * matchPct) / 100;
+  const gapOffset = circumference - (circumference * gapPct) / 100;
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
-      {/* Header Banner */}
-      <div className="card" style={{ padding: '24px', backgroundColor: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <span className="badge badge-warning" style={{ marginBottom: '8px' }}>Module 2 Active</span>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main)' }}>Skill-Gap Analysis & Readiness Evaluation</h2>
-          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Compare your profile skills with industry career requirements and identify critical improvement areas.
-          </p>
-        </div>
-        <button onClick={() => setActiveTab('recommend')} className="btn btn-primary">
-          View Recommendations (M3) →
-        </button>
-      </div>
-
-      {/* Empty Profile Alert */}
-      {!hasSkills && (
-        <div style={{ padding: '16px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Info size={22} color="var(--danger)" />
-            <div>
-              <h4 style={{ fontWeight: 600, color: 'var(--danger)', fontSize: '0.9rem' }}>No Skills Found in Profile</h4>
-              <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Complete your resume/profile analysis in Module 1 before performing skill-gap analysis.
-              </p>
-            </div>
+      {/* 1. Compact Role Selection Header */}
+      <div className="card" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--warning-bg)', color: 'var(--warning)' }}>
+            <Target size={20} />
           </div>
-          <button onClick={() => setActiveTab('profile')} className="btn btn-secondary btn-sm">
-            Go to Profile (M1) <ArrowRight size={14} />
-          </button>
+          <div>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              Skill-Gap Evaluation
+            </h2>
+            <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+              Compare candidate profile against target job role qualifications.
+            </p>
+          </div>
         </div>
-      )}
 
-      {/* Select Career Role Dropdown & Grid */}
-      <div className="card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Target size={18} color="var(--primary)" /> Select Target Career Role
-          </h3>
-          
-          {/* Dropdown Control */}
+        {/* Target Role Selector & Action */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Target:</span>
           <select
             className="form-select"
-            style={{ maxWidth: '300px' }}
+            style={{ width: '260px', padding: '6px 12px', fontSize: '0.825rem', fontWeight: 700 }}
             value={selectedTargetRole?.role_id || ''}
             onChange={(e) => {
               const role = careerRoles.find(r => r.role_id === e.target.value);
@@ -126,238 +128,187 @@ const SkillGapPage = () => {
               </option>
             ))}
           </select>
-        </div>
 
-        {/* Role Cards Selector */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-          {careerRoles.map((role) => {
-            const isSelected = selectedTargetRole?.role_id === role.role_id;
-            return (
-              <div
-                key={role.role_id}
-                onClick={() => setSelectedTargetRole(role)}
-                style={{
-                  padding: '14px 16px',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-subtle)',
-                  border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-color)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>{role.title}</h4>
-                  {isSelected && <ShieldCheck size={16} color="var(--primary)" />}
-                </div>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{role.category}</p>
-              </div>
-            );
-          })}
+          <button onClick={() => setActiveTab('recommend')} className="btn btn-primary btn-sm">
+            Career Matches <ArrowRight size={13} />
+          </button>
         </div>
       </div>
 
-      {/* Analysis Results */}
-      {selectedTargetRole && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Score & Summary Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-            
-            {/* Circular/Ring Match Visual */}
-            <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '20px' }}>
-              
-              {/* Skill Match Circle */}
-              <div style={{ textAlign: 'center' }}>
-                <div className="score-circle-container">
-                  <svg width="140" height="140" viewBox="0 0 140 140">
-                    <circle cx="70" cy="70" r="54" fill="none" stroke="#e2e8f0" strokeWidth="12" />
-                    <circle
-                      cx="70"
-                      cy="70"
-                      r="54"
-                      fill="none"
-                      stroke="var(--primary)"
-                      strokeWidth="12"
-                      strokeDasharray="339.29"
-                      strokeDashoffset={339.29 - (339.29 * matchPct) / 100}
-                      strokeLinecap="round"
-                      transform="rotate(-90 70 70)"
-                      style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-                    />
-                  </svg>
-                  <div className="score-text-center">
-                    <div className="score-big-val" style={{ color: 'var(--primary)' }}>{matchPct}%</div>
-                    <div className="score-sub-label">Match Score</div>
-                  </div>
-                </div>
-                <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>
-                  Skill Match
-                </div>
+      {/* 2. Top Evaluation Overview (Fits in Viewport) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '16px' }}>
+        
+        {/* Dual Ring Gauges */}
+        <div className="card" style={{ padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '14px' }}>
+          {/* Match Ring */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ position: 'relative', width: '100px', height: '100px', margin: '0 auto' }}>
+              <svg width="100" height="100" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="50" cy="50" r="42" stroke="#e2e8f0" strokeWidth="8" fill="transparent" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  stroke={matchPct >= 70 ? 'var(--success)' : 'var(--primary)'}
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={matchOffset}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                />
+              </svg>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100px', height: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '1.4rem', fontWeight: 800, color: matchPct >= 70 ? 'var(--success)' : 'var(--primary)', lineHeight: 1 }}>{matchPct}%</span>
+                <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Match</span>
               </div>
-
-              {/* Skill Gap Circle */}
-              <div style={{ textAlign: 'center' }}>
-                <div className="score-circle-container">
-                  <svg width="140" height="140" viewBox="0 0 140 140">
-                    <circle cx="70" cy="70" r="54" fill="none" stroke="#e2e8f0" strokeWidth="12" />
-                    <circle
-                      cx="70"
-                      cy="70"
-                      r="54"
-                      fill="none"
-                      stroke="var(--danger)"
-                      strokeWidth="12"
-                      strokeDasharray="339.29"
-                      strokeDashoffset={339.29 - (339.29 * gapPct) / 100}
-                      strokeLinecap="round"
-                      transform="rotate(-90 70 70)"
-                      style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-                    />
-                  </svg>
-                  <div className="score-text-center">
-                    <div className="score-big-val" style={{ color: 'var(--danger)' }}>{gapPct}%</div>
-                    <div className="score-sub-label">Skill Gap</div>
-                  </div>
-                </div>
-                <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--danger)' }}>
-                  Skill Gap
-                </div>
-              </div>
-
             </div>
-
-            {/* Target Role & Readiness Summary Card */}
-            <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <span className="badge badge-primary" style={{ marginBottom: '8px' }}>
-                  {selectedTargetRole.category}
-                </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
-                  {selectedTargetRole.title}
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '16px' }}>
-                  {selectedTargetRole.description}
-                </p>
-              </div>
-
-              {/* Readiness Summary */}
-              {analysisResult?.readiness_summary && (
-                <div style={{ padding: '14px 16px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--info-bg)', border: '1px solid var(--info-border)' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
-                    Readiness Evaluation
-                  </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-main)' }}>
-                    {analysisResult.readiness_summary}
-                  </div>
-                </div>
-              )}
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '6px' }}>
+              Skill Compatibility
             </div>
-
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
+              {matchedSkills.length} of {matchedSkills.length + missingSkills.length} skills fulfilled
+            </div>
           </div>
 
-          {/* 4 Skill Categories Breakdown Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-            
-            {/* 1. Matched Skills (Green) */}
-            <div className="card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <CheckCircle2 size={18} color="var(--success)" />
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--success)' }}>
-                  Matched Skills ({analysisResult?.matched_skills?.length || 0})
-                </h4>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {(analysisResult?.matched_skills || []).map((s, idx) => (
-                  <span key={idx} className="badge badge-success">
-                    ✓ {s}
-                  </span>
-                ))}
-                {(!analysisResult?.matched_skills || analysisResult.matched_skills.length === 0) && (
-                  <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>No skills matched yet.</span>
-                )}
-              </div>
-            </div>
-
-            {/* 2. Missing Core Skills (Red) */}
-            <div className="card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <XCircle size={18} color="var(--danger)" />
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--danger)' }}>
-                  Missing Core Skills ({analysisResult?.missing_core_skills?.length || 0})
-                </h4>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {(analysisResult?.missing_core_skills || []).map((s, idx) => (
-                  <span key={idx} className="badge badge-danger">
-                    ✕ {s}
-                  </span>
-                ))}
-                {(!analysisResult?.missing_core_skills || analysisResult.missing_core_skills.length === 0) && (
-                  <span style={{ fontSize: '0.825rem', color: 'var(--success)' }}>All core requirements met!</span>
-                )}
+          {/* Delta Ring */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ position: 'relative', width: '100px', height: '100px', margin: '0 auto' }}>
+              <svg width="100" height="100" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="50" cy="50" r="42" stroke="#e2e8f0" strokeWidth="8" fill="transparent" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  stroke="var(--warning)"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={gapOffset}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                />
+              </svg>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100px', height: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--warning)', lineHeight: 1 }}>{gapPct}%</span>
+                <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Gap</span>
               </div>
             </div>
-
-            {/* 3. Missing Secondary Skills (Orange) */}
-            <div className="card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <AlertTriangle size={18} color="var(--warning)" />
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--warning)' }}>
-                  Missing Secondary Skills ({analysisResult?.missing_secondary_skills?.length || 0})
-                </h4>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {(analysisResult?.missing_secondary_skills || []).map((s, idx) => (
-                  <span key={idx} className="badge badge-warning">
-                    ! {s}
-                  </span>
-                ))}
-                {(!analysisResult?.missing_secondary_skills || analysisResult.missing_secondary_skills.length === 0) && (
-                  <span style={{ fontSize: '0.825rem', color: 'var(--success)' }}>No secondary skill gaps.</span>
-                )}
-              </div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '6px' }}>
+              Pending Gap
             </div>
-
-            {/* 4. Missing Soft Skills (Blue/Info) */}
-            <div className="card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <Info size={18} color="var(--info)" />
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--info)' }}>
-                  Soft Skills Gap ({analysisResult?.missing_soft_skills?.length || 0})
-                </h4>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {(analysisResult?.missing_soft_skills || []).map((s, idx) => (
-                  <span key={idx} className="badge badge-info">
-                    {s}
-                  </span>
-                ))}
-                {(!analysisResult?.missing_soft_skills || analysisResult.missing_soft_skills.length === 0) && (
-                  <span style={{ fontSize: '0.825rem', color: 'var(--success)' }}>Soft skills verified.</span>
-                )}
-              </div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
+              {missingSkills.length} competencies pending
             </div>
-
           </div>
-
-          {/* Extra / Complementary Student Skills */}
-          {analysisResult?.extra_skills?.length > 0 && (
-            <div className="card" style={{ padding: '20px' }}>
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '10px' }}>
-                Complementary Student Skills ({analysisResult.extra_skills.length})
-              </h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {analysisResult.extra_skills.map((s, idx) => (
-                  <span key={idx} className="badge badge-neutral">
-                    {s}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
         </div>
-      )}
+
+        {/* Selected Role Summary & Readiness Verdict */}
+        <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>{selectedTargetRole?.category || 'Software'}</span>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>{selectedTargetRole?.salary_band || 'Industry Standard'}</span>
+            </div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', margin: '4px 0' }}>
+              {selectedTargetRole?.title}
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.4, margin: '4px 0 10px 0' }}>
+              {selectedTargetRole?.description?.slice(0, 160)}...
+            </p>
+          </div>
+
+          <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
+                Readiness Evaluation
+              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: matchPct >= 70 ? 'var(--success)' : (matchPct >= 50 ? 'var(--primary)' : 'var(--warning)') }}>
+                {matchPct >= 70 ? '✓ Placement Ready' : (matchPct >= 50 ? '⚡ Highly Competitive (Bridge 1-2 skills)' : '⚠ Foundational (Action required)')}
+              </span>
+            </div>
+            <button onClick={() => setActiveTab('resources')} className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
+              <BookOpen size={13} /> Learning Roadmaps
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* 3. Skills Matrix: Have vs Missing (Side-by-Side) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        
+        {/* Matching Skills */}
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <CheckCircle2 size={18} color="var(--success)" />
+            <h4 style={{ fontSize: '0.925rem', fontWeight: 700, margin: 0 }}>
+              Skills You Have ({matchedSkills.length})
+            </h4>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {matchedSkills.map((skill, index) => (
+              <span
+                key={index}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--success-bg)',
+                  border: '1px solid var(--success-border)',
+                  color: 'var(--success)',
+                  fontSize: '0.775rem',
+                  fontWeight: 600
+                }}
+              >
+                <CheckCircle2 size={12} /> {skill}
+              </span>
+            ))}
+            {matchedSkills.length === 0 && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>None matched yet in current profile.</span>
+            )}
+          </div>
+        </div>
+
+        {/* Missing Skills */}
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <AlertTriangle size={18} color="var(--warning)" />
+            <h4 style={{ fontSize: '0.925rem', fontWeight: 700, margin: 0 }}>
+              Missing Skills to Acquire ({missingSkills.length})
+            </h4>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {missingSkills.map((skill, index) => (
+              <span
+                key={index}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--warning-bg)',
+                  border: '1px solid var(--warning-border)',
+                  color: '#b45309',
+                  fontSize: '0.775rem',
+                  fontWeight: 600
+                }}
+              >
+                <XCircle size={12} color="var(--warning)" /> {skill}
+              </span>
+            ))}
+            {missingSkills.length === 0 && (
+              <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 600 }}>100% benchmark qualification fulfilled!</span>
+            )}
+          </div>
+        </div>
+
+      </div>
 
     </div>
   );

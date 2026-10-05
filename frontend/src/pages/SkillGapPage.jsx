@@ -54,20 +54,47 @@ const SkillGapPage = () => {
 
   const runSkillGapAnalysis = async (roleId) => {
     setIsLoading(true);
+    // If target role is a live job or has custom required_skills
+    if (selectedTargetRole && (selectedTargetRole.id || !careerRoles.some(r => r.role_id === roleId))) {
+      let rawList = selectedTargetRole.required_skills || selectedTargetRole.tags || [];
+      if (!Array.isArray(rawList) && typeof rawList === 'object') {
+        rawList = rawList.core || [];
+      }
+      const reqSkills = rawList.map(s => typeof s === 'string' ? s : (s.name || String(s)));
+      const matched = reqSkills.filter(s => 
+        studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim() || sk.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(sk.toLowerCase()))
+      );
+      const missing = reqSkills.filter(s => 
+        !studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim() || sk.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(sk.toLowerCase()))
+      );
+      const matchPct = reqSkills.length > 0 ? Math.round((matched.length / reqSkills.length) * 100) : (studentSkills.length > 0 ? 70 : 0);
+      setAnalysisResult({
+        skill_match_percentage: matchPct,
+        skill_gap_percentage: 100 - matchPct,
+        matching_skills: matched,
+        missing_skills: missing
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await analyzeSkillGap(studentProfile.student_id, roleId, studentSkills);
       if (res.status === 'success') {
         setAnalysisResult(res.data);
       }
     } catch (err) {
-      // Fallback local analytical calculation if network or auth error
       if (selectedTargetRole) {
-        const reqSkills = selectedTargetRole.required_skills || [];
+        let rawList = selectedTargetRole.required_skills || selectedTargetRole.tags || [];
+        if (!Array.isArray(rawList) && typeof rawList === 'object') {
+          rawList = rawList.core || [];
+        }
+        const reqSkills = rawList.map(s => typeof s === 'string' ? s : (s.name || String(s)));
         const matched = reqSkills.filter(s => 
-          studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim())
+          studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim() || sk.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(sk.toLowerCase()))
         );
         const missing = reqSkills.filter(s => 
-          !studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim())
+          !studentSkills.some(sk => sk.toLowerCase().trim() === s.toLowerCase().trim() || sk.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(sk.toLowerCase()))
         );
         const matchPct = reqSkills.length > 0 ? Math.round((matched.length / reqSkills.length) * 100) : 0;
         setAnalysisResult({
@@ -111,7 +138,7 @@ const SkillGapPage = () => {
         </div>
 
         {/* Target Role Selector & Action */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>Target:</span>
           <select
             className="form-select"
@@ -122,6 +149,11 @@ const SkillGapPage = () => {
               if (role) setSelectedTargetRole(role);
             }}
           >
+            {!careerRoles.some(r => r.role_id === selectedTargetRole?.role_id) && selectedTargetRole && (
+              <option value={selectedTargetRole.role_id}>
+                {selectedTargetRole.title} ({selectedTargetRole.category || 'Live Opening'})
+              </option>
+            )}
             {careerRoles.map((role) => (
               <option key={role.role_id} value={role.role_id}>
                 {role.title} ({role.category})
@@ -129,8 +161,20 @@ const SkillGapPage = () => {
             ))}
           </select>
 
+          {selectedTargetRole?.apply_url && (
+            <a
+              href={selectedTargetRole.apply_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline btn-sm"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
+              Apply to Opening ↗
+            </a>
+          )}
+
           <button onClick={() => setActiveTab('recommend')} className="btn btn-primary btn-sm">
-            Career Matches <ArrowRight size={13} />
+            Live Jobs <ArrowRight size={13} />
           </button>
         </div>
       </div>

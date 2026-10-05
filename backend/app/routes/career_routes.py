@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.models.career_model import CareerModel
 from app.models.student_model import StudentModel
 from app.services.recommender import RecommendationEngineService
+from app.services.job_search_service import JobSearchService
 
 career_bp = Blueprint("career", __name__, url_prefix="/api/careers")
 
@@ -28,7 +29,9 @@ def get_career_by_role_id(role_id):
 @career_bp.route("/recommend", methods=["POST"])
 def get_recommendations():
     """
-    Generates career suitability recommendations for a given student profile or ID.
+    Generates real-time, verified job recommendations dynamically matched 
+    to the student's actual skills, qualifications, and preferences.
+    Searches across LinkedIn, Remotive, and Arbeitnow with valid application URLs.
     """
     try:
         data = request.get_json() or {}
@@ -38,27 +41,58 @@ def get_recommendations():
         if not profile_data and student_id:
             profile_data = StudentModel.find_by_id(student_id)
 
+        # Fallback empty profile structure if user hasn't registered yet
         if not profile_data:
-            return jsonify({"status": "error", "message": "Student profile data or valid student_id is required."}), 400
+            profile_data = {"skills": [], "academic_info": {"cgpa": 7.5}}
 
-        available_careers = CareerModel.find_all()
-        
-        # If DB is empty, load benchmark career dataset from JSON as fallback
-        if not available_careers:
-            import os, json
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            careers_json_path = os.path.join(base_dir, "data", "career_roles.json")
-            if os.path.exists(careers_json_path):
-                with open(careers_json_path, "r", encoding="utf-8") as f:
-                    available_careers = json.load(f)
+        query = data.get("query")
+        location = data.get("location", "Remote")
+        platform = data.get("platform", "all")
+        force_refresh = data.get("refresh", False)
 
-        recommendations = RecommendationEngineService.recommend_careers(profile_data, available_careers)
+        # 1. Fetch & recommend real jobs across platforms
+        real_job_recommendations = JobSearchService.evaluate_and_recommend(
+            student_profile=profile_data,
+            query=query,
+            location=location,
+            platform=platform,
+            force_refresh=force_refresh
+        )
 
         return jsonify({
             "status": "success",
-            "count": len(recommendations),
-            "data": recommendations
+            "count": len(real_job_recommendations),
+            "data": real_job_recommendations,
+            "query_used": query or "Profile Extracted Skills",
+            "location_used": location,
+            "platform_used": platform
         }), 200
 
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@career_bp.route("/search-live", methods=["GET"])
+def search_live_jobs():
+    """
+    Direct live search across LinkedIn, Arbeitnow, and Remotive job boards.
+    """
+    try:
+        query = request.args.get("query", "Software Engineer")
+        location = request.args.get("location", "Remote")
+        platform = request.args.get("platform", "all")
+        limit = int(request.args.get("limit", 25))
+
+        jobs = JobSearchService.search_all_real_jobs(
+            query=query,
+            location=location,
+            platform=platform,
+            limit=limit
+        )
+
+        return jsonify({
+            "status": "success",
+            "count": len(jobs),
+            "data": jobs
+        }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

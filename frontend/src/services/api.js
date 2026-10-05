@@ -128,11 +128,20 @@ export const fetchCareerByRoleId = async (roleId) => {
   return res.data;
 };
 
-export const getCareerRecommendations = async (studentId, profile = null) => {
+export const getCareerRecommendations = async (studentId, profile = null, options = {}) => {
   const res = await API.post('/careers/recommend', {
     student_id: studentId,
     profile: profile,
+    query: options.query || '',
+    location: options.location || 'Remote',
+    platform: options.platform || 'all',
+    refresh: options.refresh || false,
   });
+  return res.data;
+};
+
+export const searchLiveJobs = async (params = {}) => {
+  const res = await API.get('/careers/search-live', { params });
   return res.data;
 };
 

@@ -14,8 +14,8 @@ import {
   TrendingUp,
   ShieldCheck,
   Sparkles,
-  ChevronRight,
-  GraduationCap
+  GraduationCap,
+  ExternalLink
 } from 'lucide-react';
 
 const DashboardPage = () => {
@@ -194,16 +194,21 @@ const DashboardPage = () => {
           
           {/* Top Recommendation Showcase Card */}
           <div className="card" style={{ padding: '22px 24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
               <div>
                 <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
-                  {topMatch ? 'Optimal Career Fit' : 'Career Matching Engine'}
+                  {topMatch ? `Top Real Match • ${topMatch.platform || 'Verified'}` : 'Live Career Engine'}
                 </span>
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
-                  {topMatch ? topMatch.title : (skills.length > 0 ? 'Evaluating Benchmark Roles...' : 'No Career Matches Yet')}
+                  {topMatch ? topMatch.title : (skills.length > 0 ? 'Evaluating Live Job Openings...' : 'No Career Matches Yet')}
                 </h3>
+                {topMatch?.company && (
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    At <strong>{topMatch.company}</strong> • {topMatch.location || 'Remote'}
+                  </p>
+                )}
               </div>
-              <span className="badge badge-primary">{topMatch?.salary_band || (skills.length > 0 ? 'Evaluating' : 'Pending Skills')}</span>
+              <span className="badge badge-primary">{topMatch?.salary || 'Market Competitive'}</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
@@ -233,33 +238,56 @@ const DashboardPage = () => {
               {/* Role Details & Actions */}
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: '10px' }}>
-                  {topMatch?.description ? topMatch.description.slice(0, 140) + '...' : (skills.length > 0 ? 'Calculating suitability scores across benchmark career profiles in MongoDB...' : 'Add your skills or upload a resume to calculate personalized placement recommendations.')}
+                  {topMatch?.description ? topMatch.description.slice(0, 140) + '...' : (skills.length > 0 ? 'Evaluating live openings from LinkedIn, Remotive, and Arbeitnow...' : 'Add your skills or upload a resume to calculate personalized placement recommendations.')}
                 </p>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-                  {(topMatch?.required_skills || []).slice(0, 4).map((s, i) => (
-                    <span key={i} className="badge badge-neutral" style={{ fontSize: '0.725rem' }}>{s}</span>
+                  {(topMatch?.matched_skills || []).slice(0, 4).map((s, i) => (
+                    <span key={i} className="badge badge-success" style={{ fontSize: '0.725rem' }}>✓ {s}</span>
                   ))}
-                  {(!topMatch || !topMatch.required_skills?.length) && skills.slice(0, 3).map((s, i) => (
+                  {(!topMatch || !topMatch.matched_skills?.length) && skills.slice(0, 3).map((s, i) => (
                     <span key={i} className="badge badge-primary" style={{ fontSize: '0.725rem' }}>{s}</span>
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {topMatch?.apply_url && (
+                    <a
+                      href={topMatch.apply_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary btn-sm"
+                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      Apply Now <ExternalLink size={13} />
+                    </a>
+                  )}
+
                   <button
                     onClick={() => {
-                      if (topMatch) setSelectedTargetRole(topMatch);
+                      if (topMatch) {
+                        setSelectedTargetRole({
+                          role_id: topMatch.id,
+                          title: topMatch.title,
+                          category: topMatch.platform,
+                          required_skills: topMatch.required_skills || topMatch.tags || [],
+                          description: topMatch.description,
+                          apply_url: topMatch.apply_url,
+                          company: topMatch.company
+                        });
+                      }
                       setActiveTab('skillgap');
                     }}
-                    className="btn btn-primary btn-sm"
-                  >
-                    Analyze Skill Gap <ChevronRight size={13} />
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('recommend')}
                     className="btn btn-secondary btn-sm"
                   >
-                    All Recommendations
+                    Analyze Skill Gap
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('recommend')}
+                    className="btn btn-outline btn-sm"
+                  >
+                    All Real Jobs →
                   </button>
                 </div>
               </div>

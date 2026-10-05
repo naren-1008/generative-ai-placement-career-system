@@ -37,6 +37,8 @@ const AuthPage = () => {
   const [branch, setBranch] = useState('Computer Science & Engineering');
   const [graduationYear, setGraduationYear] = useState('2025');
   const [cgpa, setCgpa] = useState('');
+  const [tenthPercentage, setTenthPercentage] = useState('');
+  const [twelfthPercentage, setTwelfthPercentage] = useState('');
   const [initialSkills, setInitialSkills] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,6 +58,8 @@ const AuthPage = () => {
       setBranch('Information Technology');
       setGraduationYear('2025');
       setCgpa('8.7');
+      setTenthPercentage('92.5');
+      setTwelfthPercentage('89.0');
       setInitialSkills('Java, Python, React, SQL, Git');
     }
   };
@@ -106,6 +110,8 @@ const AuthPage = () => {
           branch: branch.trim() || 'Computer Science & Engineering',
           graduation_year: parseInt(graduationYear) || 2025,
           cgpa: parseFloat(cgpa) || 0.0,
+          tenth_percentage: parseFloat(tenthPercentage) || 0.0,
+          twelfth_percentage: parseFloat(twelfthPercentage) || 0.0,
           skills: skillsArray
         };
 
@@ -376,6 +382,38 @@ const AuthPage = () => {
                       placeholder="e.g. 8.4"
                       value={cgpa}
                       onChange={(e) => setCgpa(e.target.value)}
+                      className="form-input"
+                      style={{ fontSize: '0.825rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">10th Standard (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="e.g. 92.5"
+                      value={tenthPercentage}
+                      onChange={(e) => setTenthPercentage(e.target.value)}
+                      className="form-input"
+                      style={{ fontSize: '0.825rem' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">12th / Diploma (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="e.g. 89.0"
+                      value={twelfthPercentage}
+                      onChange={(e) => setTwelfthPercentage(e.target.value)}
                       className="form-input"
                       style={{ fontSize: '0.825rem' }}
                     />

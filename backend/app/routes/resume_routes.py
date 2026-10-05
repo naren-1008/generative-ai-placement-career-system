@@ -103,9 +103,9 @@ def confirm_profile(current_user):
             "degree": existing_academic.get("degree") or incoming_academic.get("degree", "B.Tech"),
             "branch": existing_academic.get("branch") or incoming_academic.get("branch", "Computer Science"),
             "graduation_year": existing_academic.get("graduation_year") or incoming_academic.get("graduation_year", 2025),
-            "cgpa": existing_academic.get("cgpa", 0.0) if existing_academic.get("cgpa") is not None else incoming_academic.get("cgpa", 0.0),
-            "tenth_percentage": existing_academic.get("tenth_percentage", 0.0),
-            "twelfth_percentage": existing_academic.get("twelfth_percentage", 0.0)
+            "cgpa": incoming_academic.get("cgpa") if incoming_academic.get("cgpa") is not None else existing_academic.get("cgpa", 0.0),
+            "tenth_percentage": incoming_academic.get("tenth_percentage") if incoming_academic.get("tenth_percentage") is not None else existing_academic.get("tenth_percentage", 0.0),
+            "twelfth_percentage": incoming_academic.get("twelfth_percentage") if incoming_academic.get("twelfth_percentage") is not None else existing_academic.get("twelfth_percentage", 0.0)
         }
 
         # Merged parsed profile (skills, projects, education, certifications, experience)

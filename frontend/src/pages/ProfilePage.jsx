@@ -19,19 +19,23 @@ import {
   Layers,
   ArrowRight,
   ShieldCheck,
-  Check
+  Check,
+  FileCheck,
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 
 const ProfilePage = () => {
-  const { studentProfile, setStudentProfile, showNotification, setActiveTab } = useStudent();
+  const { studentProfile, setStudentProfile, showNotification, setActiveTab, user } = useStudent();
   
   const [profileTab, setProfileTab] = useState('extracted'); // 'upload', 'extracted', 'edit'
   const [selectedFile, setSelectedFile] = useState(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [justParsed, setJustParsed] = useState(false);
   
-  // Custom skill and cert input states
+  // Custom skill input state
   const [newSkillInput, setNewSkillInput] = useState('');
 
   // Handle Resume File Upload & Extraction
@@ -55,10 +59,11 @@ const ProfilePage = () => {
           ...prev,
           personal_info: {
             ...prev.personal_info,
-            email: prev.personal_info?.email || parsed.contact_info?.email || "",
-            phone: prev.personal_info?.phone || parsed.contact_info?.phone || "",
-            github_url: prev.personal_info?.github_url || parsed.contact_info?.github || "",
-            linkedin_url: prev.personal_info?.linkedin_url || parsed.contact_info?.linkedin || ""
+            name: parsed.contact_info?.name || prev.personal_info?.name || "",
+            email: parsed.contact_info?.email || prev.personal_info?.email || "",
+            phone: parsed.contact_info?.phone || prev.personal_info?.phone || "",
+            github_url: parsed.contact_info?.github || prev.personal_info?.github_url || "",
+            linkedin_url: parsed.contact_info?.linkedin || prev.personal_info?.linkedin_url || ""
           },
           parsed_profile: {
             skills: mergedSkills,
@@ -70,7 +75,8 @@ const ProfilePage = () => {
           resume_metadata: parsed.resume_metadata
         }));
 
-        showNotification("Resume parsed successfully! Profile skills updated.", "success");
+        setJustParsed(true);
+        showNotification("Resume parsed successfully! Review your complete extraction below.", "success");
         setProfileTab('extracted');
       }
     } catch (err) {
@@ -110,14 +116,16 @@ const ProfilePage = () => {
     }));
   };
 
-  // Confirm and Save Profile to Backend
+  // Confirm and Save Profile to Backend & Advance to Next Step
   const handleConfirmProfile = async () => {
     setIsSaving(true);
     try {
       const res = await confirmResumeProfile(studentProfile);
       if (res.status === 'success') {
         if (res.data) setStudentProfile(res.data);
-        showNotification("Profile confirmed and saved successfully!", "success");
+        showNotification("Profile confirmed and saved! Calculating skill gaps...", "success");
+        setJustParsed(false);
+        // Advance dynamically to the next step: Skill-Gap Evaluation
         setActiveTab('skillgap');
       }
     } catch (err) {
@@ -149,6 +157,10 @@ const ProfilePage = () => {
   const education = studentProfile.parsed_profile?.education || [];
   const projects = studentProfile.parsed_profile?.projects || [];
   const certs = studentProfile.parsed_profile?.certifications || [];
+  const experience = studentProfile.parsed_profile?.experience || [];
+  const resumeMeta = studentProfile.resume_metadata;
+  const personal = studentProfile.personal_info || {};
+  const academic = studentProfile.academic_info || {};
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -160,7 +172,7 @@ const ProfilePage = () => {
             Profile & Resume Hub
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-            Manage verified skill taxonomy, academic qualifications, and resume documents.
+            Upload resume, review complete extracted profile details, and verify before skill gap evaluation.
           </p>
         </div>
 
@@ -171,8 +183,8 @@ const ProfilePage = () => {
             className={`tab-btn ${profileTab === 'extracted' ? 'active' : ''}`}
             style={{ padding: '6px 14px', fontSize: '0.8125rem' }}
           >
-            <FileText size={14} />
-            <span>Profile Overview ({skills.length})</span>
+            <FileCheck size={14} />
+            <span>Extracted Profile ({skills.length})</span>
           </button>
           <button
             onClick={() => setProfileTab('upload')}
@@ -193,14 +205,60 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* TAB: PROFILE OVERVIEW (EXTRACTED) */}
+      {/* TAB 1: COMPLETE EXTRACTED RESUME REVIEW */}
       {profileTab === 'extracted' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
-          {/* Top 2 Summary Cards */}
+          {/* Prominent Verification Notice & Advance Button */}
+          <div style={{
+            padding: '16px 20px',
+            borderRadius: 'var(--radius-md)',
+            background: justParsed ? 'var(--success-bg)' : 'var(--primary-light)',
+            border: `1px solid ${justParsed ? 'var(--success-border)' : 'var(--primary-border)'}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '14px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: 'var(--radius-sm)',
+                background: justParsed ? 'var(--success)' : 'var(--primary)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <FileCheck size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                  {justParsed ? 'Complete Resume Extraction Ready for Verification' : 'Verified Candidate Profile Record'}
+                </h3>
+                <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                  Review parsed details below. Confirming will synchronize with database and proceed to Skill-Gap Evaluation.
+                </p>
+              </div>
+            </div>
+
+            <button 
+              onClick={handleConfirmProfile} 
+              disabled={isSaving}
+              className="btn btn-primary"
+              style={{ padding: '10px 20px', fontSize: '0.85rem' }}
+            >
+              {isSaving ? 'Synchronizing Profile...' : 'Confirm Extracted Profile & Proceed →'}
+            </button>
+          </div>
+
+          {/* Top 2 Extracted Summary Columns */}
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px' }}>
             
-            {/* Candidate & Contact Details */}
+            {/* Extracted Personal & Contact Card */}
             <div className="card" style={{ padding: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -209,91 +267,91 @@ const ProfilePage = () => {
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                      {studentProfile.personal_info?.name || user?.name || (user?.email ? user.email.split('@')[0] : 'Student')}
+                      {personal.name || user?.name || (user?.email ? user.email.split('@')[0] : 'Student')}
                     </h3>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Verified Student Candidate</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {resumeMeta?.filename ? `Extracted from: ${resumeMeta.filename}` : 'Active Student Account'}
+                    </span>
                   </div>
                 </div>
                 <button onClick={() => setProfileTab('edit')} className="btn btn-outline btn-sm" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
-                  Edit
+                  Edit Details
                 </button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.825rem' }}>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Email:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.personal_info?.email || user?.email || 'Not provided'}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Email Address:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{personal.email || user?.email || 'Not provided'}</span>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Phone:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.personal_info?.phone || 'Not provided'}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Phone Number:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{personal.phone || 'Not provided'}</span>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Degree & Branch:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.academic_info?.degree || 'Degree Pending'} ({studentProfile.academic_info?.branch || 'Branch Pending'})</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>GitHub URL:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--primary)', wordBreak: 'break-all' }}>{personal.github_url || 'Not provided'}</span>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Graduation Year:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.academic_info?.graduation_year || 2025}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>LinkedIn Profile:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--primary)', wordBreak: 'break-all' }}>{personal.linkedin_url || 'Not provided'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Academic Eligibility Metrics */}
+            {/* Extracted Academic & Eligibility Card */}
             <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.825rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <GraduationCap size={16} color="var(--primary)" /> Academic Scores
-                </span>
-                <span className="badge badge-success" style={{ fontSize: '0.675rem' }}>
-                  {studentProfile.academic_info?.cgpa ? 'Validated' : 'Pending Entry'}
-                </span>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.825rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <GraduationCap size={16} color="var(--primary)" /> Academic Scores & Eligibility
+                  </span>
+                  <span className="badge badge-success" style={{ fontSize: '0.675rem' }}>
+                    {academic.cgpa ? 'Scores Validated' : 'Awaiting Scores'}
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                  {academic.degree || 'Degree Pending'} • {academic.branch || 'Branch Pending'} • Class of {academic.graduation_year || 2025}
+                </div>
               </div>
 
+              {/* 3 Academic Metrics: CGPA, 10th Score, 12th Score */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
-                <div style={{ padding: '10px', borderRadius: 'var(--radius-sm)', background: 'var(--primary-light)' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700 }}>CGPA</div>
-                  <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    {studentProfile.academic_info?.cgpa || '0.0'}
+                <div style={{ padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--primary-light)' }}>
+                  <div style={{ fontSize: '0.675rem', color: 'var(--primary)', fontWeight: 700 }}>CGPA</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary)' }}>
+                    {academic.cgpa ? academic.cgpa : '0.0'}
                   </div>
                 </div>
-                <div style={{ padding: '10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>10th Score</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                    {studentProfile.academic_info?.tenth_percentage ? `${studentProfile.academic_info.tenth_percentage}%` : 'N/A'}
-                  </div>
-                </div>
-                <div style={{ padding: '10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>12th Score</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                    {studentProfile.academic_info?.twelfth_percentage ? `${studentProfile.academic_info.twelfth_percentage}%` : 'N/A'}
-                  </div>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                <button 
-                  onClick={handleConfirmProfile} 
-                  disabled={isSaving}
-                  className="btn btn-primary btn-sm"
-                  style={{ width: '100%', justifyContent: 'center' }}
-                >
-                  {isSaving ? 'Saving...' : 'Confirm Profile & Run Skill-Gap →'}
-                </button>
+                <div style={{ padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', fontWeight: 600 }}>10th Score</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                    {academic.tenth_percentage ? `${academic.tenth_percentage}%` : 'N/A'}
+                  </div>
+                </div>
+
+                <div style={{ padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)', fontWeight: 600 }}>12th Score</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                    {academic.twelfth_percentage ? `${academic.twelfth_percentage}%` : 'N/A'}
+                  </div>
+                </div>
               </div>
             </div>
 
           </div>
 
-          {/* Technical Skills Inventory */}
+          {/* Extracted Technical Skills Inventory */}
           <div className="card" style={{ padding: '22px 24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                  <Sparkles size={16} color="var(--primary)" /> Verified Technical Skills ({skills.length})
+                  <Sparkles size={16} color="var(--primary)" /> Extracted Technical Skills ({skills.length})
                 </h3>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Mapped to benchmark industry job profiles
+                  Identified by NLP entity extraction and mapped to industry taxonomy. Click &times; to delete or add custom skills.
                 </span>
               </div>
 
@@ -301,7 +359,7 @@ const ProfilePage = () => {
               <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   type="text"
-                  placeholder="Add skill (e.g. Docker)..."
+                  placeholder="Add skill (e.g. AWS)..."
                   value={newSkillInput}
                   onChange={(e) => setNewSkillInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSkill(); }}}
@@ -349,7 +407,7 @@ const ProfilePage = () => {
                       display: 'flex',
                       alignItems: 'center'
                     }}
-                    title="Remove"
+                    title="Remove skill"
                   >
                     <X size={12} />
                   </button>
@@ -357,54 +415,90 @@ const ProfilePage = () => {
               ))}
 
               {skills.length === 0 && (
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.825rem', padding: '8px 0' }}>
-                  No skills listed yet. Add custom skills or upload a resume.
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.825rem', padding: '12px 0' }}>
+                  No skills listed yet. Upload a resume or add skills using the input box above.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Education & Projects Compact Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {/* Extracted Education, Projects & Experience Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            
+            {/* Education History */}
             <div className="card" style={{ padding: '18px 20px' }}>
               <h4 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <GraduationCap size={16} color="var(--primary)" /> Education Record
+                <GraduationCap size={16} color="var(--primary)" /> Extracted Education
               </h4>
               {education.map((edu, i) => (
-                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
+                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '8px' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{edu.degree || edu.institution}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{edu.institution} • {edu.score || '8.5 CGPA'}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{edu.institution} • {edu.score || 'Score: Verified'}</div>
                 </div>
               ))}
-              {education.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No records parsed.</div>}
+              {education.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No formal education records parsed.</div>}
             </div>
 
+            {/* Work Experience */}
             <div className="card" style={{ padding: '18px 20px' }}>
               <h4 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Award size={16} color="var(--warning)" /> Key Projects & Certifications
+                <Briefcase size={16} color="var(--info)" /> Extracted Experience
+              </h4>
+              {experience.map((exp, i) => (
+                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{exp.title || exp.role}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{exp.company} • {exp.duration || 'Past Role'}</div>
+                  {exp.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>{exp.description}</div>}
+                </div>
+              ))}
+              {experience.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No prior work experience extracted (Fresher Candidate).</div>}
+            </div>
+
+            {/* Projects & Certifications */}
+            <div className="card" style={{ padding: '18px 20px' }}>
+              <h4 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Award size={16} color="var(--warning)" /> Projects & Certifications
               </h4>
               {projects.map((proj, i) => (
-                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '6px' }}>
+                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '8px' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{proj.title}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{proj.description?.slice(0, 80)}...</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{proj.description?.slice(0, 100)}...</div>
                 </div>
               ))}
               {certs.map((c, i) => (
-                <span key={i} className="badge badge-warning" style={{ marginRight: '6px' }}>{c}</span>
+                <span key={i} className="badge badge-warning" style={{ marginRight: '6px', marginBottom: '6px' }}>{c}</span>
               ))}
-              {projects.length === 0 && certs.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No records.</div>}
+              {projects.length === 0 && certs.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No projects or certifications detected.</div>}
             </div>
+
+          </div>
+
+          {/* Bottom Confirmation Bar */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '4px' }}>
+            <button 
+              onClick={() => setProfileTab('upload')} 
+              className="btn btn-secondary"
+            >
+              Upload Another Resume
+            </button>
+            <button 
+              onClick={handleConfirmProfile} 
+              disabled={isSaving}
+              className="btn btn-primary btn-lg"
+            >
+              {isSaving ? 'Saving Profile...' : 'Confirm Profile & Proceed to Skill-Gap Evaluation →'}
+            </button>
           </div>
 
         </div>
       )}
 
-      {/* TAB: UPLOAD RESUME */}
+      {/* TAB 2: UPLOAD RESUME DROPZONE */}
       {profileTab === 'upload' && (
         <div className="card" style={{ padding: '36px 32px' }}>
           <div
             className={`upload-dropzone ${isDragging ? 'drag-active' : ''}`}
-            style={{ padding: '36px 20px' }}
+            style={{ padding: '40px 20px' }}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={(e) => {
@@ -424,16 +518,16 @@ const ProfilePage = () => {
               onChange={(e) => handleFileUpload(e.target.files[0])}
             />
 
-            <div className="upload-icon-pulse" style={{ width: '56px', height: '56px', marginBottom: '12px' }}>
-              <UploadCloud size={26} />
+            <div className="upload-icon-pulse" style={{ width: '60px', height: '60px', marginBottom: '14px' }}>
+              <UploadCloud size={28} />
             </div>
 
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>
-              {isParsing ? 'Extracting Resume Data...' : 'Drop Resume PDF / DOCX here or Browse File'}
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>
+              {isParsing ? 'Parsing Resume with PyMuPDF & spaCy NLP...' : 'Drop Resume PDF / DOCX here or Click to Browse'}
             </h3>
 
-            <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto 14px auto' }}>
-              Automatically parses contact info, academic scores, and technical skills using our NLP entity extractor.
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', maxWidth: '440px', margin: '0 auto 14px auto' }}>
+              Extracts personal contact info, academic scores, verified technical skills, projects, and work experience for complete candidate review.
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
@@ -445,11 +539,16 @@ const ProfilePage = () => {
         </div>
       )}
 
-      {/* TAB: EDIT PROFILE FORM */}
+      {/* TAB 3: EDIT PROFILE FORM (WITH 10TH & 12TH PERCENTAGES) */}
       {profileTab === 'edit' && (
         <form onSubmit={handleSaveEditProfile} className="card" style={{ padding: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Candidate Profile Details</h3>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Candidate Profile Details</h3>
+              <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Update your contact information, degrees, CGPA, and 10th / 12th scores.
+              </p>
+            </div>
             <button type="submit" disabled={isSaving} className="btn btn-primary btn-sm">
               <Save size={14} /> {isSaving ? 'Saving...' : 'Save Profile Changes'}
             </button>
@@ -461,10 +560,10 @@ const ProfilePage = () => {
               <input
                 type="text"
                 className="form-input"
-                value={studentProfile.personal_info?.name || ''}
+                value={personal.name || ''}
                 onChange={(e) => setStudentProfile({
                   ...studentProfile,
-                  personal_info: { ...studentProfile.personal_info, name: e.target.value }
+                  personal_info: { ...personal, name: e.target.value }
                 })}
               />
             </div>
@@ -474,10 +573,10 @@ const ProfilePage = () => {
               <input
                 type="email"
                 className="form-input"
-                value={studentProfile.personal_info?.email || ''}
+                value={personal.email || ''}
                 onChange={(e) => setStudentProfile({
                   ...studentProfile,
-                  personal_info: { ...studentProfile.personal_info, email: e.target.value }
+                  personal_info: { ...personal, email: e.target.value }
                 })}
               />
             </div>
@@ -487,10 +586,10 @@ const ProfilePage = () => {
               <input
                 type="text"
                 className="form-input"
-                value={studentProfile.personal_info?.phone || ''}
+                value={personal.phone || ''}
                 onChange={(e) => setStudentProfile({
                   ...studentProfile,
-                  personal_info: { ...studentProfile.personal_info, phone: e.target.value }
+                  personal_info: { ...personal, phone: e.target.value }
                 })}
               />
             </div>
@@ -500,42 +599,135 @@ const ProfilePage = () => {
               <input
                 type="text"
                 className="form-input"
-                value={studentProfile.academic_info?.degree || ''}
+                value={academic.degree || ''}
                 onChange={(e) => setStudentProfile({
                   ...studentProfile,
-                  academic_info: { ...studentProfile.academic_info, degree: e.target.value }
+                  academic_info: { ...academic, degree: e.target.value }
                 })}
               />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Branch</label>
+              <label className="form-label">Branch / Department</label>
               <input
                 type="text"
                 className="form-input"
-                value={studentProfile.academic_info?.branch || ''}
+                value={academic.branch || ''}
                 onChange={(e) => setStudentProfile({
                   ...studentProfile,
-                  academic_info: { ...studentProfile.academic_info, branch: e.target.value }
+                  academic_info: { ...academic, branch: e.target.value }
                 })}
               />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">CGPA</label>
+              <label className="form-label">Graduation Year</label>
+              <input
+                type="number"
+                min="2020"
+                max="2032"
+                className="form-input"
+                value={academic.graduation_year || 2025}
+                onChange={(e) => setStudentProfile({
+                  ...studentProfile,
+                  academic_info: { ...academic, graduation_year: parseInt(e.target.value) || 2025 }
+                })}
+              />
+            </div>
+
+            {/* CGPA */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Cumulative CGPA (0 - 10)</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 max="10"
+                placeholder="e.g. 8.5"
                 className="form-input"
-                value={studentProfile.academic_info?.cgpa || ''}
+                value={academic.cgpa || ''}
                 onChange={(e) => setStudentProfile({
                   ...studentProfile,
-                  academic_info: { ...studentProfile.academic_info, cgpa: parseFloat(e.target.value) || 0 }
+                  academic_info: { ...academic, cgpa: parseFloat(e.target.value) || 0 }
                 })}
               />
             </div>
+
+            {/* 10th Percentage */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">10th Standard Score (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="e.g. 92.5"
+                className="form-input"
+                value={academic.tenth_percentage || ''}
+                onChange={(e) => setStudentProfile({
+                  ...studentProfile,
+                  academic_info: { ...academic, tenth_percentage: parseFloat(e.target.value) || 0 }
+                })}
+              />
+            </div>
+
+            {/* 12th Percentage */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">12th / Diploma Score (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="e.g. 89.0"
+                className="form-input"
+                value={academic.twelfth_percentage || ''}
+                onChange={(e) => setStudentProfile({
+                  ...studentProfile,
+                  academic_info: { ...academic, twelfth_percentage: parseFloat(e.target.value) || 0 }
+                })}
+              />
+            </div>
+
+            {/* GitHub URL */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">GitHub Profile URL</label>
+              <input
+                type="url"
+                placeholder="https://github.com/username"
+                className="form-input"
+                value={personal.github_url || ''}
+                onChange={(e) => setStudentProfile({
+                  ...studentProfile,
+                  personal_info: { ...personal, github_url: e.target.value }
+                })}
+              />
+            </div>
+
+            {/* LinkedIn URL */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">LinkedIn Profile URL</label>
+              <input
+                type="url"
+                placeholder="https://linkedin.com/in/username"
+                className="form-input"
+                value={personal.linkedin_url || ''}
+                onChange={(e) => setStudentProfile({
+                  ...studentProfile,
+                  personal_info: { ...personal, linkedin_url: e.target.value }
+                })}
+              />
+            </div>
+
+          </div>
+
+          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button type="button" onClick={() => setProfileTab('extracted')} className="btn btn-secondary btn-sm">
+              Cancel
+            </button>
+            <button type="submit" disabled={isSaving} className="btn btn-primary btn-sm">
+              <Save size={14} /> {isSaving ? 'Saving Changes...' : 'Save Profile Changes'}
+            </button>
           </div>
         </form>
       )}

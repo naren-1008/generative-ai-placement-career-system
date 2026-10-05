@@ -35,8 +35,9 @@ const ProfilePage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [justParsed, setJustParsed] = useState(false);
   
-  // Custom skill input state
+  // Custom skill and cert input states
   const [newSkillInput, setNewSkillInput] = useState('');
+  const [newCertInput, setNewCertInput] = useState('');
 
   // Handle Resume File Upload & Extraction
   const handleFileUpload = async (file) => {
@@ -112,6 +113,46 @@ const ProfilePage = () => {
       parsed_profile: {
         ...prev.parsed_profile,
         skills: (prev.parsed_profile?.skills || []).filter(s => s !== skillToRemove)
+      }
+    }));
+  };
+
+  // Remove Project
+  const handleRemoveProject = (indexToRemove) => {
+    setStudentProfile(prev => ({
+      ...prev,
+      parsed_profile: {
+        ...prev.parsed_profile,
+        projects: (prev.parsed_profile?.projects || []).filter((_, idx) => idx !== indexToRemove)
+      }
+    }));
+  };
+
+  // Add Certification
+  const handleAddCert = () => {
+    if (!newCertInput.trim()) return;
+    const certName = newCertInput.trim();
+    setStudentProfile(prev => {
+      const currentCerts = prev.parsed_profile?.certifications || [];
+      if (currentCerts.includes(certName)) return prev;
+      return {
+        ...prev,
+        parsed_profile: {
+          ...prev.parsed_profile,
+          certifications: [...currentCerts, certName]
+        }
+      };
+    });
+    setNewCertInput('');
+  };
+
+  // Remove Certification
+  const handleRemoveCert = (certToRemove) => {
+    setStudentProfile(prev => ({
+      ...prev,
+      parsed_profile: {
+        ...prev.parsed_profile,
+        certifications: (prev.parsed_profile?.certifications || []).filter(c => c !== certToRemove)
       }
     }));
   };
@@ -422,53 +463,188 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Extracted Education, Projects & Experience Grid */}
+          {/* Extracted Projects Section */}
+          <div className="card" style={{ padding: '20px 24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Award size={18} color="var(--primary)" /> Extracted Projects ({projects.length})
+                </h4>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Distinct projects identified from your resume. Remove or keep projects relevant to your career path.
+                </span>
+              </div>
+            </div>
+
+            {projects.length === 0 ? (
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '10px 0' }}>
+                No projects identified in resume.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '12px' }}>
+                {projects.map((proj, idx) => (
+                  <div 
+                    key={idx} 
+                    style={{ 
+                      padding: '14px 16px', 
+                      borderRadius: 'var(--radius-md)', 
+                      background: 'var(--bg-subtle)', 
+                      border: '1px solid var(--border-color)',
+                      position: 'relative'
+                    }}
+                  >
+                    <button
+                      onClick={() => handleRemoveProject(idx)}
+                      style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '4px'
+                      }}
+                      title="Remove project"
+                    >
+                      <X size={14} />
+                    </button>
+
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-main)', paddingRight: '20px', marginBottom: '4px' }}>
+                      {proj.title}
+                    </div>
+
+                    {proj.technologies && (
+                      <div style={{ marginBottom: '6px' }}>
+                        <span className="badge badge-primary" style={{ fontSize: '0.675rem' }}>
+                          {proj.technologies}
+                        </span>
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                      {proj.description}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Extracted Certifications, Education & Experience Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
             
-            {/* Education History */}
+            {/* Certifications Card */}
+            <div className="card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={16} color="var(--warning)" /> Certifications ({certs.length})
+                  </h4>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                  {certs.map((c, i) => (
+                    <span 
+                      key={i} 
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'var(--warning-bg)',
+                        border: '1px solid var(--warning-border)',
+                        color: 'var(--warning)',
+                        fontSize: '0.775rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      {c}
+                      <button
+                        onClick={() => handleRemoveCert(c)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--warning)',
+                          cursor: 'pointer',
+                          padding: '1px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="Remove certification"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                  {certs.length === 0 && (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      No professional certifications detected.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Add Certification Input */}
+              <div style={{ display: 'flex', gap: '6px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
+                <input
+                  type="text"
+                  placeholder="Add certification (e.g. AWS Cloud)..."
+                  value={newCertInput}
+                  onChange={(e) => setNewCertInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCert(); }}}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.75rem',
+                    flex: 1
+                  }}
+                />
+                <button onClick={handleAddCert} className="btn btn-secondary btn-sm" style={{ padding: '5px 10px', fontSize: '0.75rem' }}>
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Experience Card */}
+            <div className="card" style={{ padding: '18px 20px' }}>
+              <h4 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Briefcase size={16} color="var(--info)" /> Work Experience & Internships
+              </h4>
+              {experience.map((exp, i) => (
+                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{exp.title || exp.role}</div>
+                  {exp.duration && <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>{exp.duration}</div>}
+                  {exp.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>{exp.description}</div>}
+                </div>
+              ))}
+              {experience.length === 0 && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  No prior work experience extracted (Fresher Candidate).
+                </div>
+              )}
+            </div>
+
+            {/* Education History Card */}
             <div className="card" style={{ padding: '18px 20px' }}>
               <h4 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <GraduationCap size={16} color="var(--primary)" /> Extracted Education
               </h4>
               {education.map((edu, i) => (
                 <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{edu.degree || edu.institution}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{edu.institution} • {edu.score || 'Score: Verified'}</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>{edu.degree || edu.details}</div>
+                  {edu.details && edu.details !== edu.degree && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{edu.details}</div>
+                  )}
                 </div>
               ))}
-              {education.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No formal education records parsed.</div>}
-            </div>
-
-            {/* Work Experience */}
-            <div className="card" style={{ padding: '18px 20px' }}>
-              <h4 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Briefcase size={16} color="var(--info)" /> Extracted Experience
-              </h4>
-              {experience.map((exp, i) => (
-                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{exp.title || exp.role}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{exp.company} • {exp.duration || 'Past Role'}</div>
-                  {exp.description && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>{exp.description}</div>}
+              {education.length === 0 && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  No formal education records parsed.
                 </div>
-              ))}
-              {experience.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No prior work experience extracted (Fresher Candidate).</div>}
-            </div>
-
-            {/* Projects & Certifications */}
-            <div className="card" style={{ padding: '18px 20px' }}>
-              <h4 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Award size={16} color="var(--warning)" /> Projects & Certifications
-              </h4>
-              {projects.map((proj, i) => (
-                <div key={i} style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{proj.title}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{proj.description?.slice(0, 100)}...</div>
-                </div>
-              ))}
-              {certs.map((c, i) => (
-                <span key={i} className="badge badge-warning" style={{ marginRight: '6px', marginBottom: '6px' }}>{c}</span>
-              ))}
-              {projects.length === 0 && certs.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No projects or certifications detected.</div>}
+              )}
             </div>
 
           </div>

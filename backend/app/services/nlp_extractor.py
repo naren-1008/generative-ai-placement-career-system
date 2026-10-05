@@ -2,6 +2,7 @@ import os
 import json
 import re
 import logging
+import unicodedata
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +17,20 @@ except ImportError:
     nlp = None
 
 class NLPExtractorService:
-    # Section Header Keywords Pattern Definitions
+    # Comprehensive Section Header Patterns with boundary and delimiter support
     SECTION_PATTERNS = {
-        "education": r'^\s*(education|academic background|academics|qualifications|academic details)\s*$',
-        "skills": r'^\s*(skills|technical skills|key skills|technologies|core competencies)\s*$',
-        "projects": r'^\s*(projects|key projects|academic projects|personal projects)\s*$',
-        "certifications": r'^\s*(certifications|certificates|professional certifications|credentials|licenses & certifications)\s*$',
-        "experience": r'^\s*(experience|work experience|internships|professional experience|employment history)\s*$'
+        "education": r'^\s*(education|academic background|academics|qualifications|academic details|scholastic achievements)\b[:\s-]*$',
+        "skills": r'^\s*(technical skills|skills|key skills|technologies|core competencies|programming languages|areas of expertise)\b[:\s-]*$',
+        "experience": r'^\s*(work experience|professional experience|experience|employment history|internships|work history|industrial training)\b[:\s-]*$',
+        "projects": r'^\s*(projects|academic projects|key projects|personal projects|technical projects|notable projects|capstone projects)\b[:\s-]*$',
+        "certifications": r'^\s*(certifications|certificates|professional certifications|credentials|licenses & certifications|certifications & licenses|certifications & courses|courses & certifications)\b[:\s-]*$',
+        "involvement": r'^\s*(campus involvement|leadership|extracurricular activities|activities|co-curricular activities|volunteer experience|community involvement|positions of responsibility)\b[:\s-]*$',
+        "accomplishments": r'^\s*(accomplishments|achievements|honors & awards|awards & achievements|competitions|hackathons)\b[:\s-]*$',
+        "publications": r'^\s*(publications|research papers|patents)\b[:\s-]*$'
     }
+
+    BULLET_CHARS = ('•', '-', '*', '–', '—', '\x83', '\x95', '▪', '►', '‣', '·')
+    DATE_PATTERN = r'^(?:(19|20)\d{2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(19|20)?\d{2})\s*(?:[-–—to]+\s*(?:(19|20)\d{2}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(19|20)?\d{2}|present|ongoing|current))?$'
 
     def __init__(self, taxonomy_path=None):
         if not taxonomy_path:
@@ -76,6 +83,7 @@ class NLPExtractorService:
     def _parse_sections(self, text):
         """
         Splits text into logical section blocks using regex heading boundaries.
+        Ensures sections like 'Campus Involvement' and 'Accomplishments' do not leak into certifications or projects.
         """
         sections = {}
         current_section = None
@@ -86,7 +94,6 @@ class NLPExtractorService:
             if not stripped:
                 continue
 
-            # Check if line is a section header
             matched_header = None
             for sec_name, pattern in self.SECTION_PATTERNS.items():
                 if re.match(pattern, stripped, re.IGNORECASE):
@@ -125,7 +132,6 @@ class NLPExtractorService:
         extracted_skills = set()
         text_lower = text.lower()
         
-        # Tokenize text with word boundary awareness
         words = set(re.findall(r'\b[a-zA-Z0-9\+#\.]+\b', text_lower))
 
         for category, skill_dict in self.taxonomy.items():
@@ -146,7 +152,7 @@ class NLPExtractorService:
 
     def extract_education(self, text, section_lines=None):
         education_entries = []
-        degrees = ["B.Tech", "M.Tech", "B.E.", "B.Sc", "M.Sc", "BCA", "MCA", "Bachelor", "Master", "PhD"]
+        degrees = ["B.Tech", "M.Tech", "B.E.", "B.Sc", "M.Sc", "BCA", "MCA", "Bachelor", "Master", "Diploma", "PhD"]
         
         lines_to_check = section_lines if section_lines else text.split("\n")
         
@@ -160,7 +166,6 @@ class NLPExtractorService:
                     })
                     break
 
-        # Fallback line scan if section parsing yielded no degrees
         if not education_entries and section_lines is None:
             for line in text.split("\n"):
                 for deg in degrees:
@@ -171,7 +176,6 @@ class NLPExtractorService:
                         })
                         break
 
-        # Deduplicate by details string
         seen = set()
         unique_entries = []
         for entry in education_entries:
@@ -179,123 +183,216 @@ class NLPExtractorService:
                 seen.add(entry["details"])
                 unique_entries.append(entry)
 
-        return unique_entries[:3]
+        return unique_entries[:4]
 
     def extract_projects(self, text, section_lines=None):
-        projects = []
+        """
+        Extracts actual distinct projects by grouping bullet points and descriptions
+        under each project's header line, rather than treating each bullet point as a separate project.
+        """
         lines_to_check = section_lines if section_lines else []
         
-        # If no explicit section block was captured, fallback to regex search
+        # If no explicit section was captured, fallback to regex scanning
         if not lines_to_check:
             lines = text.split("\n")
             in_sec = False
             for line in lines:
                 l_str = line.strip()
-                if re.match(r'^\s*(projects|key projects|academic projects)\s*$', l_str, re.IGNORECASE):
+                if re.match(r'^\s*(projects|key projects|academic projects|personal projects)\b[:\s-]*$', l_str, re.IGNORECASE):
                     in_sec = True
                     continue
-                elif in_sec and re.match(r'^\s*(experience|education|skills|certifications|awards)\s*$', l_str, re.IGNORECASE):
+                elif in_sec and re.match(r'^\s*(experience|education|skills|certifications|awards|involvement|accomplishments)\b[:\s-]*$', l_str, re.IGNORECASE):
                     break
-                if in_sec and len(l_str) > 8:
+                if in_sec and l_str:
                     lines_to_check.append(l_str)
 
+        projects = []
+        current_proj = None
+
         for line in lines_to_check:
-            cleaned = line.lstrip("•-* ").strip()
-            if len(cleaned) > 10:
-                projects.append({
-                    "title": cleaned[:60],
-                    "description": cleaned
-                })
+            clean = line.strip()
+            if not clean:
+                continue
 
-        # Deduplicate
-        seen = set()
-        unique_proj = []
+            is_bullet = clean.startswith(self.BULLET_CHARS)
+            is_date = bool(re.match(self.DATE_PATTERN, clean, re.IGNORECASE)) or clean.isdigit()
+
+            # Determine if this line is a new project title
+            is_new_title = False
+            if not is_bullet and not is_date:
+                if '|' in clean:
+                    is_new_title = True
+                elif len(clean) < 80 and not clean.endswith('.'):
+                    is_new_title = True
+
+            if is_new_title:
+                if current_proj:
+                    projects.append(current_proj)
+
+                if '|' in clean:
+                    parts = clean.split('|', 1)
+                    title = parts[0].strip()
+                    tech = parts[1].strip()
+                else:
+                    title = clean
+                    tech = ""
+
+                current_proj = {
+                    "title": title,
+                    "technologies": tech,
+                    "bullets": [],
+                    "date": ""
+                }
+            elif is_date and current_proj and not current_proj["date"]:
+                current_proj["date"] = clean
+            elif current_proj:
+                bullet_clean = clean.lstrip('•-*–—\x83\x95▪►‣· ').strip()
+                if bullet_clean:
+                    current_proj["bullets"].append(bullet_clean)
+
+        if current_proj:
+            projects.append(current_proj)
+
+        # Format projects cleanly with description and technologies
+        formatted_projects = []
         for p in projects:
-            if p["title"] not in seen:
-                seen.add(p["title"])
-                unique_proj.append(p)
+            desc_parts = []
+            if p["technologies"]:
+                desc_parts.append(f"Technologies: {p['technologies']}")
+            if p["date"]:
+                desc_parts.append(f"({p['date']})")
+            if p["bullets"]:
+                desc_parts.append(" • " + " • ".join(p["bullets"]))
 
-        return unique_proj[:4]
+            full_desc = " ".join(desc_parts) if desc_parts else p["title"]
+            formatted_projects.append({
+                "title": p["title"],
+                "technologies": p["technologies"],
+                "description": full_desc
+            })
+
+        return formatted_projects
 
     def extract_certifications(self, text, section_lines=None):
         """
-        Extracts certification entries from section block or line keywords.
-        Returns a clean list of strings.
+        Extracts genuine certifications from the dedicated section.
+        Prevents other sections like 'Campus Involvement' and 'Accomplishments' from leaking in.
         """
-        certs = []
         lines_to_check = section_lines if section_lines else []
 
-        # Fallback scanning if no explicit section block
+        # If no explicit section was captured, fallback to regex search bounded by next section
         if not lines_to_check:
             lines = text.split("\n")
             in_sec = False
             for line in lines:
                 l_str = line.strip()
-                if re.match(r'^\s*(certifications|certificates|professional certifications|credentials)\s*$', l_str, re.IGNORECASE):
+                if re.match(r'^\s*(certifications|certificates|professional certifications|credentials)\b[:\s-]*$', l_str, re.IGNORECASE):
                     in_sec = True
                     continue
-                elif in_sec and re.match(r'^\s*(experience|education|skills|projects|awards)\s*$', l_str, re.IGNORECASE):
+                elif in_sec and re.match(r'^\s*(experience|education|skills|projects|awards|involvement|accomplishments|activities)\b[:\s-]*$', l_str, re.IGNORECASE):
+                    break
+                if in_sec and len(l_str) > 4:
+                    lines_to_check.append(l_str)
+
+        certs = []
+        seen = set()
+
+        for line in lines_to_check:
+            clean = line.strip().lstrip('•-*–—\x83\x95▪►‣· ')
+            if not clean or len(clean) <= 4:
+                continue
+            if re.match(self.DATE_PATTERN, clean, re.IGNORECASE) or clean.isdigit():
+                continue
+            if clean.lower() in seen:
+                continue
+
+            seen.add(clean.lower())
+            certs.append(clean)
+
+        return certs
+
+    def extract_experience(self, text, section_lines=None):
+        """
+        Extracts structured work experience / internships, grouping role, company,
+        and bullets into clean unified objects.
+        """
+        lines_to_check = section_lines if section_lines else []
+
+        if not lines_to_check:
+            lines = text.split("\n")
+            in_sec = False
+            for line in lines:
+                l_str = line.strip()
+                if re.match(r'^\s*(work experience|professional experience|experience|internships)\b[:\s-]*$', l_str, re.IGNORECASE):
+                    in_sec = True
+                    continue
+                elif in_sec and re.match(r'^\s*(education|skills|projects|certifications|awards|involvement|accomplishments)\b[:\s-]*$', l_str, re.IGNORECASE):
                     break
                 if in_sec and len(l_str) > 5:
                     lines_to_check.append(l_str)
 
-        # Keyword backup scan across entire text if still empty
-        if not lines_to_check:
-            for line in text.split("\n"):
-                l_str = line.strip()
-                if re.search(r'\b(certified|certificate|certification|coursera|udemy|aws certified|nptel)\b', l_str, re.IGNORECASE):
-                    if len(l_str) > 8 and not re.match(r'^\s*(certifications|certificates)\s*$', l_str, re.IGNORECASE):
-                        lines_to_check.append(l_str)
+        experiences = []
+        current_exp = None
 
         for line in lines_to_check:
-            cleaned = line.lstrip("•-* ").strip()
-            if cleaned and len(cleaned) > 4:
-                certs.append(cleaned)
+            clean = line.strip()
+            if not clean:
+                continue
 
-        # Deduplicate while preserving order
-        seen = set()
-        unique_certs = []
-        for c in certs:
-            if c.lower() not in seen:
-                seen.add(c.lower())
-                unique_certs.append(c)
+            is_bullet = clean.startswith(self.BULLET_CHARS)
+            is_date = bool(re.match(self.DATE_PATTERN, clean, re.IGNORECASE))
 
-        return unique_certs[:5]
+            is_new_title = False
+            if not is_bullet and not is_date:
+                if len(clean) < 65 and not clean.endswith('.'):
+                    if current_exp is None or (current_exp["bullets"] and len(current_exp["bullets"]) > 0):
+                        is_new_title = True
+                    elif not current_exp.get("company"):
+                        current_exp["company"] = clean
+                        continue
+                    elif not current_exp.get("location"):
+                        current_exp["location"] = clean
+                        continue
 
-    def extract_experience(self, text, section_lines=None):
-        """
-        Extracts experience/internship entries.
-        Returns a structured list of dicts: [{"title": "...", "description": "..."}]
-        """
-        exp_entries = []
-        lines_to_check = section_lines if section_lines else []
+            if is_new_title:
+                if current_exp:
+                    experiences.append(current_exp)
+                current_exp = {
+                    "title": clean,
+                    "company": "",
+                    "location": "",
+                    "date": "",
+                    "bullets": []
+                }
+            elif is_date and current_exp and not current_exp["date"]:
+                current_exp["date"] = clean
+            elif current_exp:
+                bullet_clean = clean.lstrip('•-*–—\x83\x95▪►‣· ').strip()
+                if bullet_clean:
+                    current_exp["bullets"].append(bullet_clean)
 
-        if not lines_to_check:
-            lines = text.split("\n")
-            in_sec = False
-            for line in lines:
-                l_str = line.strip()
-                if re.match(r'^\s*(experience|work experience|internships|professional experience)\s*$', l_str, re.IGNORECASE):
-                    in_sec = True
-                    continue
-                elif in_sec and re.match(r'^\s*(education|skills|projects|certifications|awards)\s*$', l_str, re.IGNORECASE):
-                    break
-                if in_sec and len(l_str) > 8:
-                    lines_to_check.append(l_str)
+        if current_exp:
+            experiences.append(current_exp)
 
-        for line in lines_to_check:
-            cleaned = line.lstrip("•-* ").strip()
-            if len(cleaned) > 8:
-                exp_entries.append({
-                    "title": cleaned[:60],
-                    "description": cleaned
-                })
+        formatted_exp = []
+        for exp in experiences:
+            full_title = exp["title"]
+            if exp["company"]:
+                full_title += f" at {exp['company']}"
+            
+            desc_parts = []
+            if exp["date"]:
+                desc_parts.append(f"({exp['date']})")
+            if exp["location"]:
+                desc_parts.append(exp["location"])
+            if exp["bullets"]:
+                desc_parts.append(" • " + " • ".join(exp["bullets"]))
 
-        seen = set()
-        unique_exp = []
-        for e in exp_entries:
-            if e["title"] not in seen:
-                seen.add(e["title"])
-                unique_exp.append(e)
+            formatted_exp.append({
+                "title": full_title,
+                "company": exp["company"],
+                "duration": exp["date"],
+                "description": " ".join(desc_parts) if desc_parts else full_title
+            })
 
-        return unique_exp[:4]
+        return formatted_exp

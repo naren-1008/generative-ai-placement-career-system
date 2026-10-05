@@ -36,32 +36,56 @@ def register():
         except ValueError as ve:
             return jsonify({"status": "error", "message": str(ve)}), 409
 
-        # 3. Create initial linked student profile
+        # 3. Create initial linked student profile with dynamic user inputs
         user_id = user["_id"]
+        name = data.get("name", "").strip() or email.split("@")[0].capitalize()
+        phone = data.get("phone", "").strip()
+        degree = data.get("degree", "").strip() or "B.Tech"
+        branch = data.get("branch", "").strip() or "Computer Science"
+        try:
+            grad_year = int(data.get("graduation_year", 2025))
+        except (ValueError, TypeError):
+            grad_year = 2025
+        try:
+            cgpa = float(data.get("cgpa", 0.0))
+        except (ValueError, TypeError):
+            cgpa = 0.0
+
+        initial_skills = data.get("skills", [])
+        if isinstance(initial_skills, str):
+            initial_skills = [s.strip() for s in initial_skills.split(",") if s.strip()]
+
         initial_profile = {
             "user_id": user_id,
             "personal_info": {
-                "name": email.split("@")[0].capitalize(),
+                "name": name,
                 "email": email,
-                "phone": "",
-                "github_url": "",
-                "linkedin_url": ""
+                "phone": phone,
+                "github_url": data.get("github_url", ""),
+                "linkedin_url": data.get("linkedin_url", "")
             },
             "academic_info": {
-                "degree": "B.Tech",
-                "branch": "Computer Science",
-                "graduation_year": 2025,
-                "cgpa": 0.0,
-                "tenth_percentage": 0.0,
-                "twelfth_percentage": 0.0
+                "degree": degree,
+                "branch": branch,
+                "graduation_year": grad_year,
+                "cgpa": cgpa,
+                "tenth_percentage": float(data.get("tenth_percentage", 0.0) or 0.0),
+                "twelfth_percentage": float(data.get("twelfth_percentage", 0.0) or 0.0)
             },
             "parsed_profile": {
-                "skills": [],
-                "education": [],
+                "skills": initial_skills,
+                "education": [
+                    {
+                        "degree": f"{degree} {branch}",
+                        "institution": data.get("institution", "University Department"),
+                        "score": f"{cgpa} CGPA" if cgpa > 0 else "Pending",
+                        "year": str(grad_year)
+                    }
+                ] if degree else [],
                 "projects": [],
                 "certifications": []
             },
-            "interests": []
+            "interests": data.get("interests", [branch] if branch else [])
         }
         student_profile = StudentModel.create_or_update(initial_profile)
 

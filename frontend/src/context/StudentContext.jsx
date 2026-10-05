@@ -3,43 +3,46 @@ import { fetchCurrentUser } from '../services/api';
 
 const StudentContext = createContext();
 
-export const defaultStudentProfile = {
-  user_id: "",
-  student_id: "STU1001",
+export const createEmptyProfile = (user = null) => ({
+  user_id: user?._id || "",
+  student_id: user?._id || `STU${Math.floor(1000 + Math.random() * 9000)}`,
   personal_info: {
-    name: "Alex Morgan",
-    email: "alex.morgan@university.edu",
-    phone: "+91 9876543210",
-    github_url: "https://github.com/alexmorgan",
-    linkedin_url: "https://linkedin.com/in/alexmorgan"
+    name: user?.name || (user?.email ? user.email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()) : ""),
+    email: user?.email || "",
+    phone: "",
+    github_url: "",
+    linkedin_url: ""
   },
   academic_info: {
     degree: "B.Tech",
-    branch: "Computer Science & Engineering",
+    branch: "Computer Science",
     graduation_year: 2025,
-    cgpa: 8.5,
-    tenth_percentage: 90.0,
-    twelfth_percentage: 88.5
+    cgpa: 0.0,
+    tenth_percentage: 0.0,
+    twelfth_percentage: 0.0
   },
   parsed_profile: {
-    skills: ["Python", "Flask", "JavaScript", "React", "MongoDB", "SQL", "Git", "REST APIs"],
-    education: [
-      { degree: "B.Tech CSE", institution: "Institute of Engineering & Tech", score: "8.5 CGPA", year: "2021-2025" }
-    ],
-    projects: [
-      { title: "Placement Recommendation Engine", description: "Built Flask backend and React UI for career suitability." }
-    ],
-    certifications: ["Python for Data Science"],
+    skills: [],
+    education: [],
+    projects: [],
+    certifications: [],
     experience: []
   },
-  interests: ["Backend Development", "Software Engineering"]
-};
+  interests: []
+});
 
 export const StudentProvider = ({ children }) => {
-  const [activeTab, setActiveTab] = useState("auth"); // 'auth', 'profile', 'skillgap', 'recommend'
+  const [activeTab, setActiveTab] = useState("auth"); // 'auth', 'dashboard', 'profile', 'skillgap', 'recommend'
   const [token, setToken] = useState(() => localStorage.getItem("token") || "");
-  const [user, setUser] = useState(null);
-  const [studentProfile, setStudentProfile] = useState(defaultStudentProfile);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [studentProfile, setStudentProfile] = useState(() => createEmptyProfile());
   const [selectedTargetRole, setSelectedTargetRole] = useState(null);
   const [authInitializing, setAuthInitializing] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -52,10 +55,8 @@ export const StudentProvider = ({ children }) => {
     const validateSession = async () => {
       const storedToken = localStorage.getItem("token");
       if (!storedToken) {
-        setToken("");
-        setUser(null);
+        clearAuthState();
         setAuthInitializing(false);
-        setActiveTab("auth");
         return;
       }
 
@@ -67,13 +68,14 @@ export const StudentProvider = ({ children }) => {
           localStorage.setItem("user", JSON.stringify(res.user));
           if (res.student_profile) {
             setStudentProfile(res.student_profile);
+          } else {
+            setStudentProfile(createEmptyProfile(res.user));
           }
-          setActiveTab("profile");
+          setActiveTab("dashboard");
         } else {
           clearAuthState();
         }
       } catch (err) {
-        // Token invalid, expired, or user no longer exists on backend
         clearAuthState();
       } finally {
         setAuthInitializing(false);
@@ -88,6 +90,7 @@ export const StudentProvider = ({ children }) => {
     localStorage.removeItem("user");
     setToken("");
     setUser(null);
+    setStudentProfile(createEmptyProfile());
     setActiveTab("auth");
   };
 
@@ -98,9 +101,11 @@ export const StudentProvider = ({ children }) => {
     setUser(userData);
     if (profileData) {
       setStudentProfile(profileData);
+    } else {
+      setStudentProfile(createEmptyProfile(userData));
     }
-    setActiveTab("profile");
-    showNotification(`Welcome back, ${userData.email}!`, "success");
+    setActiveTab("dashboard");
+    showNotification(`Welcome, ${profileData?.personal_info?.name || userData.email}!`, "success");
   };
 
   const logout = () => {

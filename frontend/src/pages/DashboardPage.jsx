@@ -49,7 +49,7 @@ const DashboardPage = () => {
     loadDashboardMetrics();
   }, [studentProfile]);
 
-  const topScore = topMatch ? Math.round(topMatch.suitability_score) : 78;
+  const topScore = topMatch ? Math.round(topMatch.suitability_score) : (skills.length > 0 ? 50 : 0);
   const circumference = 2 * Math.PI * 40;
   const strokeDashoffset = circumference - (topScore / 100) * circumference;
 
@@ -98,11 +98,11 @@ const DashboardPage = () => {
                 fontWeight: 600,
                 border: '1px solid rgba(96, 165, 250, 0.3)'
               }}>
-                Placement Ready
+                {skills.length > 0 ? 'Placement Ready' : 'Profile Initialized'}
               </span>
             </div>
             <p style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: '2px 0 0 0' }}>
-              Profile verified • {academic.degree || 'B.Tech'} ({academic.branch || 'CSE'}) • CGPA: {academic.cgpa || '8.5'}
+              Profile verified • {academic.degree || 'Degree Pending'} ({academic.branch || 'Branch Pending'}) • CGPA: {academic.cgpa ? academic.cgpa : 'Not set'}
             </p>
           </div>
         </div>
@@ -196,12 +196,14 @@ const DashboardPage = () => {
           <div className="card" style={{ padding: '22px 24px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Optimal Career Fit</span>
+                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                  {topMatch ? 'Optimal Career Fit' : 'Career Matching Engine'}
+                </span>
                 <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>
-                  {topMatch ? topMatch.title : 'Full Stack Developer'}
+                  {topMatch ? topMatch.title : (skills.length > 0 ? 'Evaluating Benchmark Roles...' : 'No Career Matches Yet')}
                 </h3>
               </div>
-              <span className="badge badge-primary">{topMatch?.salary_band || '₹8 - 14 LPA'}</span>
+              <span className="badge badge-primary">{topMatch?.salary_band || (skills.length > 0 ? 'Evaluating' : 'Pending Skills')}</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
@@ -231,12 +233,15 @@ const DashboardPage = () => {
               {/* Role Details & Actions */}
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: '10px' }}>
-                  {topMatch?.description ? topMatch.description.slice(0, 140) + '...' : 'Benchmark industry role aligning strongly with your extracted technical competencies and academic profile.'}
+                  {topMatch?.description ? topMatch.description.slice(0, 140) + '...' : (skills.length > 0 ? 'Calculating suitability scores across benchmark career profiles in MongoDB...' : 'Add your skills or upload a resume to calculate personalized placement recommendations.')}
                 </p>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-                  {(topMatch?.required_skills || ['Python', 'React', 'MongoDB', 'REST APIs']).slice(0, 4).map((s, i) => (
+                  {(topMatch?.required_skills || []).slice(0, 4).map((s, i) => (
                     <span key={i} className="badge badge-neutral" style={{ fontSize: '0.725rem' }}>{s}</span>
+                  ))}
+                  {(!topMatch || !topMatch.required_skills?.length) && skills.slice(0, 3).map((s, i) => (
+                    <span key={i} className="badge badge-primary" style={{ fontSize: '0.725rem' }}>{s}</span>
                   ))}
                 </div>
 
@@ -395,15 +400,21 @@ const DashboardPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center' }}>
               <div style={{ padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
                 <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>CGPA</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>{academic.cgpa || 8.5}</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+                  {academic.cgpa ? academic.cgpa : '0.0'}
+                </div>
               </div>
               <div style={{ padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
                 <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>10th Score</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{academic.tenth_percentage || 90}%</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>
+                  {academic.tenth_percentage ? `${academic.tenth_percentage}%` : 'N/A'}
+                </div>
               </div>
               <div style={{ padding: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
                 <div style={{ fontSize: '0.675rem', color: 'var(--text-muted)' }}>12th Score</div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>{academic.twelfth_percentage || 88}%</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>
+                  {academic.twelfth_percentage ? `${academic.twelfth_percentage}%` : 'N/A'}
+                </div>
               </div>
             </div>
           </div>

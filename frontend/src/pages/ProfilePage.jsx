@@ -209,7 +209,7 @@ const ProfilePage = () => {
                   </div>
                   <div>
                     <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-                      {studentProfile.personal_info?.name || 'Alex Morgan'}
+                      {studentProfile.personal_info?.name || user?.name || (user?.email ? user.email.split('@')[0] : 'Student')}
                     </h3>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Verified Student Candidate</span>
                   </div>
@@ -222,15 +222,15 @@ const ProfilePage = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.825rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Email:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.personal_info?.email || 'student@university.edu'}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.personal_info?.email || user?.email || 'Not provided'}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Phone:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.personal_info?.phone || '+91 9876543210'}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.personal_info?.phone || 'Not provided'}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Degree & Branch:</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.academic_info?.degree} ({studentProfile.academic_info?.branch})</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{studentProfile.academic_info?.degree || 'Degree Pending'} ({studentProfile.academic_info?.branch || 'Branch Pending'})</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', display: 'block' }}>Graduation Year:</span>
@@ -245,26 +245,28 @@ const ProfilePage = () => {
                 <span style={{ fontSize: '0.825rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <GraduationCap size={16} color="var(--primary)" /> Academic Scores
                 </span>
-                <span className="badge badge-success" style={{ fontSize: '0.675rem' }}>Eligible</span>
+                <span className="badge badge-success" style={{ fontSize: '0.675rem' }}>
+                  {studentProfile.academic_info?.cgpa ? 'Validated' : 'Pending Entry'}
+                </span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
                 <div style={{ padding: '10px', borderRadius: 'var(--radius-sm)', background: 'var(--primary-light)' }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700 }}>CGPA</div>
                   <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    {studentProfile.academic_info?.cgpa || 8.5}
+                    {studentProfile.academic_info?.cgpa || '0.0'}
                   </div>
                 </div>
                 <div style={{ padding: '10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>10th Score</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                    {studentProfile.academic_info?.tenth_percentage || 90}%
+                    {studentProfile.academic_info?.tenth_percentage ? `${studentProfile.academic_info.tenth_percentage}%` : 'N/A'}
                   </div>
                 </div>
                 <div style={{ padding: '10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>12th Score</div>
                   <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                    {studentProfile.academic_info?.twelfth_percentage || 88}%
+                    {studentProfile.academic_info?.twelfth_percentage ? `${studentProfile.academic_info.twelfth_percentage}%` : 'N/A'}
                   </div>
                 </div>
               </div>

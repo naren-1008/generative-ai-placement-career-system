@@ -53,12 +53,12 @@ export const checkHealth = async () => {
 };
 
 // Authentication APIs
-export const registerUser = async (email, password, confirmPassword) => {
-  const res = await API.post('/auth/register', {
-    email,
-    password,
-    confirm_password: confirmPassword
-  });
+export const registerUser = async (registrationData) => {
+  // Support either full object or individual parameters for backwards compatibility
+  const payload = typeof registrationData === 'object' && registrationData !== null
+    ? registrationData
+    : { email: arguments[0], password: arguments[1], confirm_password: arguments[2] };
+  const res = await API.post('/auth/register', payload);
   return res.data;
 };
 

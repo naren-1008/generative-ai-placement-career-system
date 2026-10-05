@@ -1,0 +1,104 @@
+[
+  {
+    "role_id": "ROLE_SOFTWARE_ENG",
+    "title": "Software Engineer",
+    "category": "Software Engineering",
+    "domain": "Application Development",
+    "description": "Designs, implements, tests, and deploys high-performance software applications.",
+    "required_skills": {
+      "core": ["Python", "Java", "C++", "Data Structures", "Git", "REST APIs"],
+      "secondary": ["SQL", "Docker", "Linux", "CI/CD"],
+      "soft_skills": ["Problem Solving", "Teamwork"]
+    },
+    "academic_eligibility": {
+      "min_cgpa": 6.5,
+      "allowed_branches": ["Computer Science & Engineering", "Information Technology", "Electronics & Communication"]
+    },
+    "demand_level": "High"
+  },
+  {
+    "role_id": "ROLE_BACKEND_DEV",
+    "title": "Backend Developer",
+    "category": "Software Engineering",
+    "domain": "Web & Server Architecture",
+    "description": "Architects server-side logic, database integrations, RESTful APIs, and business workflows.",
+    "required_skills": {
+      "core": ["Python", "Flask", "Node.js", "REST APIs", "SQL", "MongoDB", "Git"],
+      "secondary": ["Docker", "Redis", "Linux"],
+      "soft_skills": ["Problem Solving", "Communication"]
+    },
+    "academic_eligibility": {
+      "min_cgpa": 6.0,
+      "allowed_branches": ["Computer Science & Engineering", "Information Technology", "Electrical Engineering"]
+    },
+    "demand_level": "High"
+  },
+  {
+    "role_id": "ROLE_FRONTEND_DEV",
+    "title": "Frontend Developer",
+    "category": "Software Engineering",
+    "domain": "User Experience & Web",
+    "description": "Builds responsive, highly interactive web user interfaces using modern JavaScript frameworks.",
+    "required_skills": {
+      "core": ["JavaScript", "TypeScript", "React", "HTML5", "CSS3", "Git"],
+      "secondary": ["REST APIs", "UI/UX Design", "Redux"],
+      "soft_skills": ["Teamwork", "Communication"]
+    },
+    "academic_eligibility": {
+      "min_cgpa": 6.0,
+      "allowed_branches": ["Computer Science & Engineering", "Information Technology", "Any Branch"]
+    },
+    "demand_level": "High"
+  },
+  {
+    "role_id": "ROLE_FULLSTACK_DEV",
+    "title": "Full Stack Engineer",
+    "category": "Software Engineering",
+    "domain": "End-to-End Product Development",
+    "description": "Handles both frontend UI rendering and server-side API architecture and database persistence.",
+    "required_skills": {
+      "core": ["React", "Node.js", "Python", "JavaScript", "MongoDB", "REST APIs", "Git"],
+      "secondary": ["TypeScript", "Docker", "AWS", "SQL"],
+      "soft_skills": ["Problem Solving", "Leadership", "Teamwork"]
+    },
+    "academic_eligibility": {
+      "min_cgpa": 7.0,
+      "allowed_branches": ["Computer Science & Engineering", "Information Technology"]
+    },
+    "demand_level": "Very High"
+  },
+  {
+    "role_id": "ROLE_DATA_SCIENTIST",
+    "title": "Data Scientist / ML Engineer",
+    "category": "Artificial Intelligence & Analytics",
+    "domain": "Machine Learning & Data Intelligence",
+    "description": "Extracts insights from complex data, builds predictive ML algorithms, and trains statistical models.",
+    "required_skills": {
+      "core": ["Python", "Machine Learning", "Pandas", "NumPy", "Scikit-Learn", "SQL", "Data Analysis"],
+      "secondary": ["Deep Learning", "PyTorch", "TensorFlow", "NLP", "R"],
+      "soft_skills": ["Problem Solving", "Communication"]
+    },
+    "academic_eligibility": {
+      "min_cgpa": 7.5,
+      "allowed_branches": ["Computer Science & Engineering", "Information Technology", "Data Science", "Mathematics & Computing"]
+    },
+    "demand_level": "High"
+  },
+  {
+    "role_id": "ROLE_DEVOPS_ENG",
+    "title": "DevOps / Cloud Engineer",
+    "category": "Infrastructure & Operations",
+    "domain": "Cloud & Infrastructure Systems",
+    "description": "Automates build pipelines, manages cloud infrastructure, and enforces continuous deployment.",
+    "required_skills": {
+      "core": ["AWS", "Docker", "Kubernetes", "Linux", "Git", "CI/CD"],
+      "secondary": ["Python", "Bash", "Terraform"],
+      "soft_skills": ["Problem Solving", "Teamwork"]
+    },
+    "academic_eligibility": {
+      "min_cgpa": 6.5,
+      "allowed_branches": ["Computer Science & Engineering", "Information Technology", "Electronics"]
+    },
+    "demand_level": "Medium-High"
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "skills": {
+    "Programming Languages": {
+      "Python": ["python", "py", "python3"],
+      "Java": ["java", "j2ee", "core java"],
+      "C++": ["c++", "cpp"],
+      "C#": ["c#", "csharp", ".net"],
+      "JavaScript": ["javascript", "js", "ecmascript"],
+      "TypeScript": ["typescript", "ts"],
+      "SQL": ["sql", "mysql", "postgresql", "postgres", "sqlite", "tsql"],
+      "R": ["r", "rprogramming"],
+      "Go": ["golang", "go"],
+      "Kotlin": ["kotlin"]
+    },
+    "Web & Backend Frameworks": {
+      "React": ["react", "react.js", "reactjs"],
+      "Node.js": ["node", "node.js", "nodejs", "express", "express.js"],
+      "Flask": ["flask"],
+      "Django": ["django"],
+      "FastAPI": ["fastapi"],
+      "Spring Boot": ["spring boot", "springboot", "spring framework"],
+      "HTML5": ["html", "html5"],
+      "CSS3": ["css", "css3", "sass", "scss"],
+      "REST APIs": ["rest api", "restful api", "rest apis", "restful apis", "json api"]
+    },
+    "Databases & Storage": {
+      "MongoDB": ["mongodb", "mongo", "nosql"],
+      "PostgreSQL": ["postgresql", "postgres"],
+      "MySQL": ["mysql"],
+      "Redis": ["redis"],
+      "SQLite": ["sqlite"]
+    },
+    "Data Science & Machine Learning": {
+      "Machine Learning": ["machine learning", "ml"],
+      "Deep Learning": ["deep learning", "dl"],
+      "Pandas": ["pandas"],
+      "NumPy": ["numpy"],
+      "Scikit-Learn": ["scikit-learn", "sklearn"],
+      "TensorFlow": ["tensorflow", "tf"],
+      "PyTorch": ["pytorch"],
+      "NLP": ["nlp", "natural language processing", "spacy", "nltk"],
+      "Data Analysis": ["data analysis", "eda", "exploratory data analysis"]
+    },
+    "DevOps & Tools": {
+      "Git": ["git", "github", "gitlab"],
+      "Docker": ["docker", "containerization"],
+      "Kubernetes": ["kubernetes", "k8s"],
+      "AWS": ["aws", "amazon web services"],
+      "Linux": ["linux", "bash", "shell scripting"],
+      "CI/CD": ["ci/cd", "cicd", "jenkins", "github actions"]
+    },
+    "Soft Skills": {
+      "Communication": ["communication", "public speaking", "verbal communication"],
+      "Problem Solving": ["problem solving", "analytical thinking", "critical thinking"],
+      "Teamwork": ["teamwork", "collaboration", "team collaboration"],
+      "Leadership": ["leadership", "management"]
+    }
+  }
+}
